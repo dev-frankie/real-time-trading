@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useReducer } from "react";
 import { useQuery } from "@tanstack/react-query";
 
 import {
@@ -9,6 +9,7 @@ import {
 } from "@/entities/orderbook";
 import {
   applyBinanceDepthPatch,
+  type BinanceDepthPatch,
   fetchBinanceOrderbook,
   subscribeBinanceOrderbook,
 } from "@/shared/api/orderbook-binance";
@@ -28,6 +29,10 @@ interface UseOrderbookStreamResult {
   refetch: () => Promise<unknown>;
 }
 
+type OrderbookStreamAction =
+  | { type: "syncSnapshot"; items: OrderItem[] }
+  | { type: "applyPatch"; patch: BinanceDepthPatch };
+
 function withTimeline(previousItems: OrderItem[], nextItems: OrderItem[]): OrderItem[] {
   const previousMap = new Map(previousItems.map((item) => [item.id, item.timeline ?? []]));
 
@@ -43,8 +48,20 @@ function withTimeline(previousItems: OrderItem[], nextItems: OrderItem[]): Order
   });
 }
 
+function orderbookStreamReducer(
+  currentItems: OrderItem[],
+  action: OrderbookStreamAction,
+): OrderItem[] {
+  if (action.type === "syncSnapshot") {
+    return withTimeline(currentItems, action.items);
+  }
+
+  const patchedItems = applyBinanceDepthPatch(currentItems, action.patch);
+  return withTimeline(currentItems, patchedItems);
+}
+
 export function useOrderbookStream(): UseOrderbookStreamResult {
-  const [items, setItems] = useState<OrderItem[]>([]);
+  const [items, dispatch] = useReducer(orderbookStreamReducer, []);
   const isBinanceSource = orderbookSource === "binance";
 
   const query = useQuery({
@@ -59,7 +76,7 @@ export function useOrderbookStream(): UseOrderbookStreamResult {
       return;
     }
 
-    setItems((currentItems) => withTimeline(currentItems, query.data));
+    dispatch({ type: "syncSnapshot", items: query.data });
   }, [query.data]);
 
   useEffect(() => {
@@ -68,10 +85,7 @@ export function useOrderbookStream(): UseOrderbookStreamResult {
     }
 
     const unsubscribe = subscribeBinanceOrderbook((patch) => {
-      setItems((currentItems) => {
-        const patchedItems = applyBinanceDepthPatch(currentItems, patch);
-        return withTimeline(currentItems, patchedItems);
-      });
+      dispatch({ type: "applyPatch", patch });
     });
 
     return () => {

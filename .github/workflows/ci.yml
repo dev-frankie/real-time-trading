@@ -38,8 +38,8 @@ jobs:
       - name: Knip
         run: pnpm run knip
 
-      - name: Unit tests
-        run: pnpm run test
+      - name: Vitest
+        run: pnpm exec vitest run
 
       - name: Build
         run: pnpm run build

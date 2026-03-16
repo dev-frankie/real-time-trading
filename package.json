@@ -20,8 +20,8 @@
     "knip": "knip",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
-    "format": "prettier . --check --config ./.prettier.config.ts",
-    "format:write": "prettier . --write --config ./.prettier.config.ts",
+    "format": "node --import tsx ./node_modules/prettier/bin/prettier.cjs . --check --config ./.prettier.config.ts",
+    "format:write": "node --import tsx ./node_modules/prettier/bin/prettier.cjs . --write --config ./.prettier.config.ts",
     "generate:api-types": "openapi-typescript ./src/shared/api/openapi/orderbook.openapi.yaml -o ./src/shared/api/openapi/schema.ts",
     "prepare": "husky",
     "lint-staged": "lint-staged"
@@ -67,6 +67,7 @@
     "prettier": "^3.8.1",
     "prettier-plugin-tailwindcss": "^0.7.2",
     "tailwindcss": "^4.2.1",
+    "tsx": "^4.20.6",
     "typescript": "^5.9.2",
     "typescript-eslint": "^8.56.1",
     "vite": "^7.1.3",
@@ -80,10 +81,10 @@
   "lint-staged": {
     "*.{ts,tsx}": [
       "eslint --max-warnings=0 --fix",
-      "prettier --write --config ./.prettier.config.ts"
+      "node --import tsx ./node_modules/prettier/bin/prettier.cjs --write --config ./.prettier.config.ts"
     ],
     "*.{js,json,md,css,html,yml,yaml}": [
-      "prettier --write --config ./.prettier.config.ts"
+      "node --import tsx ./node_modules/prettier/bin/prettier.cjs --write --config ./.prettier.config.ts"
     ]
   }
 }

@@ -1,5 +1,5 @@
 import type { ReactElement } from "react";
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import { useTranslation } from "react-i18next";
 import { Link, useSearchParams } from "react-router-dom";
 
@@ -15,6 +15,7 @@ export function CompletePage(): ReactElement {
   const orderResultsById = usePlaceOrderStore((state) => state.orderResultsById);
   const clearOrderResult = usePlaceOrderStore((state) => state.clearOrderResult);
   const orderResult = orderId ? orderResultsById[orderId] : undefined;
+  const cleanupCountRef = useRef(0);
 
   useEffect(() => {
     if (!orderId) {
@@ -22,6 +23,10 @@ export function CompletePage(): ReactElement {
     }
 
     return () => {
+      cleanupCountRef.current += 1;
+      if (import.meta.env.DEV && cleanupCountRef.current === 1) {
+        return;
+      }
       clearOrderResult(orderId);
     };
   }, [clearOrderResult, orderId]);

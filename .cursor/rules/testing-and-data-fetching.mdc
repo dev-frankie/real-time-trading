@@ -1,0 +1,33 @@
+---
+description: 테스트 기준 및 데이터 페칭 정책
+globs: src/**/*.{ts,tsx}
+alwaysApply: false
+---
+
+# 테스트 및 데이터 페칭
+
+- 테스트 용이성을 고려해 코드를 설계합니다(순수 함수, 필요 시 의존성 주입).
+- 스키마, 스토어, 데이터 훅 테스트를 우선합니다.
+- `describe` / `it` 스타일과 의미 있는 테스트 이름을 사용합니다.
+- 단위/통합 테스트의 네트워크 모킹은 MSW를 우선합니다.
+- Vitest 컴포넌트 테스트 파일은 컴포넌트 파일과 같은 레벨의 `__test__` 폴더에 둡니다.
+- 파일명은 `<component-name>.test.tsx`를 사용합니다.
+
+## 컴포넌트 테스트 시나리오
+
+- 렌더링 시 핵심 텍스트/역할(role)/접근성 상태가 노출되는지 검증합니다.
+- 사용자 상호작용(click, type) 시 콜백이 정확히 1회 호출되는지 검증합니다.
+- 비활성화(disabled), 로딩, 에러 상태 등 분기 UI를 반드시 검증합니다.
+- 번역(`react-i18next`), 상태스토어(`zustand`) 의존 컴포넌트는 mock을 통해 순수 단위 테스트로 검증합니다.
+
+## 데이터 페칭
+
+- 클라이언트 fetch는 TanStack Query(`useQuery` / `useMutation`)를 표준으로 사용합니다.
+- 캐시 일관성을 위해 query key factory 패턴을 사용합니다.
+- 기본 `staleTime` 가이드: 목록 30초, 상세 1분(UX 요구에 따라 조정).
+- `useEffect` 내부에서 `fetch`/axios 등 직접 HTTP 요청을 금지합니다.
+
+## `useEffect` 허용 사례
+
+- 구독 및 해제 처리(WebSocket, SDK 리스너, DOM 이벤트).
+- 서버에서 실행할 수 없는 브라우저 전용 사이드 이펙트.

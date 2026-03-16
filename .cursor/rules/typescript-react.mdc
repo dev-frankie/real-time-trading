@@ -1,0 +1,36 @@
+---
+description: TypeScript 및 React 구현 표준
+globs: src/**/*.{ts,tsx}
+alwaysApply: false
+---
+
+# TypeScript 및 React
+
+- props, state, API 타입을 명시한 엄격한 TypeScript 패턴을 사용합니다.
+- 복잡한 UI 상태에는 필요 시 판별 유니온(discriminated union)을 사용합니다.
+- 인터페이스에 `I` 접두사를 사용하지 않습니다.
+- 상속보다 조합(composition)을 우선합니다.
+- 컴포넌트는 작고 단일 책임을 유지합니다.
+- 재사용 가능한 동작은 목적이 분명한 커스텀 훅으로 분리합니다.
+
+## 네이밍
+
+- 컴포넌트: `PascalCase`
+- 훅: `use` 접두사가 있는 `camelCase`
+- 스토어 훅: `use...Store`
+- 스키마: `...Schema`
+- 타입: `PascalCase`
+
+## Import 순서
+
+1) React / Next  
+2) 외부 라이브러리  
+3) 내부 alias (`@/...`)  
+4) 상대 경로 import  
+5) 타입 전용 import (`import type`)
+
+## 폼 처리
+
+- 폼 상태 관리는 `react-hook-form`을 우선 사용합니다.
+- 폼 검증은 `zod` 스키마와 resolver 기반으로 구현합니다.
+- 검증 스키마는 `...Schema` 네이밍을 사용하고 재사용 가능한 위치에 분리합니다.

@@ -1,0 +1,247 @@
+name: CD
+
+on:
+  push:
+    tags:
+      - "release-*"
+
+env:
+  AWS_REGION: ${{ vars.AWS_REGION || 'ap-northeast-2' }}
+
+jobs:
+  prepare:
+    runs-on: ubuntu-latest
+    outputs:
+      deploy_env: ${{ steps.config.outputs.deploy_env }}
+      ecr_repository: ${{ steps.config.outputs.ecr_repository }}
+      ecs_cluster: ${{ steps.config.outputs.ecs_cluster }}
+      ecs_service: ${{ steps.config.outputs.ecs_service }}
+      environment_url: ${{ steps.config.outputs.environment_url }}
+      asset_prefix: ${{ steps.config.outputs.asset_prefix }}
+      s3_bucket: ${{ steps.config.outputs.s3_bucket }}
+      asset_path: ${{ steps.config.outputs.asset_path }}
+    steps:
+      - name: Set deploy config
+        id: config
+        run: |
+          DEPLOY_ENV="${GITHUB_REF#refs/tags/release-}"
+          ASSET_PATH="assets/${{ github.event.repository.name }}/${{ github.sha }}"
+
+          select_env() {
+            local ecr_repo="$1"
+            local ecs_cluster="$2"
+            local ecs_service="$3"
+            local env_url="$4"
+            local cdn_origin="$5"
+            local s3_bucket="$6"
+
+            echo "ecr_repository=${ecr_repo}" >> "$GITHUB_OUTPUT"
+            echo "ecs_cluster=${ecs_cluster}" >> "$GITHUB_OUTPUT"
+            echo "ecs_service=${ecs_service}" >> "$GITHUB_OUTPUT"
+            echo "environment_url=${env_url}" >> "$GITHUB_OUTPUT"
+            echo "s3_bucket=${s3_bucket}" >> "$GITHUB_OUTPUT"
+
+            if [ -n "${cdn_origin}" ]; then
+              echo "asset_prefix=${cdn_origin}/${ASSET_PATH}/" >> "$GITHUB_OUTPUT"
+            else
+              echo "asset_prefix=/" >> "$GITHUB_OUTPUT"
+            fi
+          }
+
+          case "${DEPLOY_ENV}" in
+            dev)
+              select_env \
+                "${{ secrets.ECR_REPOSITORY_DEV }}" \
+                "${{ secrets.ECS_CLUSTER_DEV }}" \
+                "${{ secrets.ECS_SERVICE_DEV }}" \
+                "${{ vars.ENVIRONMENT_URL_DEV }}" \
+                "${{ vars.CDN_ORIGIN_DEV }}" \
+                "${{ vars.S3_BUCKET_DEV }}"
+              ;;
+            staging)
+              select_env \
+                "${{ secrets.ECR_REPOSITORY_STAGING }}" \
+                "${{ secrets.ECS_CLUSTER_STAGING }}" \
+                "${{ secrets.ECS_SERVICE_STAGING }}" \
+                "${{ vars.ENVIRONMENT_URL_STAGING }}" \
+                "${{ vars.CDN_ORIGIN_STAGING }}" \
+                "${{ vars.S3_BUCKET_STAGING }}"
+              ;;
+            prod)
+              select_env \
+                "${{ secrets.ECR_REPOSITORY_PROD }}" \
+                "${{ secrets.ECS_CLUSTER_PROD }}" \
+                "${{ secrets.ECS_SERVICE_PROD }}" \
+                "${{ vars.ENVIRONMENT_URL_PROD }}" \
+                "${{ vars.CDN_ORIGIN_PROD }}" \
+                "${{ vars.S3_BUCKET_PROD }}"
+              ;;
+            *)
+              echo "Unknown environment: ${DEPLOY_ENV}"
+              exit 1
+              ;;
+          esac
+
+          echo "deploy_env=${DEPLOY_ENV}" >> "$GITHUB_OUTPUT"
+          echo "asset_path=${ASSET_PATH}" >> "$GITHUB_OUTPUT"
+          echo "Deploying to environment: ${DEPLOY_ENV}"
+
+  create-deployment:
+    needs: prepare
+    runs-on: ubuntu-latest
+    permissions:
+      deployments: write
+      contents: read
+    outputs:
+      deployment_id: ${{ steps.create-deployment.outputs.result }}
+    steps:
+      - name: Create deployment
+        id: create-deployment
+        uses: actions/github-script@v8
+        env:
+          DEPLOY_ENV: ${{ needs.prepare.outputs.deploy_env }}
+        with:
+          script: |
+            const deployment = await github.rest.repos.createDeployment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              environment: process.env.DEPLOY_ENV,
+              ref: context.ref,
+              auto_merge: false,
+              required_contexts: []
+            });
+
+            await github.rest.repos.createDeploymentStatus({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              deployment_id: deployment.data.id,
+              state: "in_progress"
+            });
+
+            return deployment.data.id.toString();
+
+  build-and-push:
+    needs: prepare
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    outputs:
+      image_uri: ${{ steps.meta.outputs.image_uri }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: ".nvmrc"
+          cache: "pnpm"
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build web assets
+        run: pnpm run build -- --base="${{ needs.prepare.outputs.asset_prefix }}"
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Upload assets to S3
+        if: ${{ needs.prepare.outputs.s3_bucket != '' && needs.prepare.outputs.asset_prefix != '/' }}
+        run: |
+          aws s3 sync \
+            dist/assets \
+            "s3://${{ needs.prepare.outputs.s3_bucket }}/${{ needs.prepare.outputs.asset_path }}/assets" \
+            --exclude "*.map" \
+            --cache-control "public, max-age=31536000, immutable"
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Login to Amazon ECR
+        id: ecr-login
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Build and push Docker image
+        id: build-image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: Dockerfile
+          push: true
+          build-args: |
+            VITE_BASE_URL=${{ needs.prepare.outputs.asset_prefix }}
+          tags: ${{ steps.ecr-login.outputs.registry }}/${{ needs.prepare.outputs.ecr_repository }}:${{ github.sha }}
+
+      - name: Export image URI
+        id: meta
+        run: |
+          echo "image_uri=${{ steps.ecr-login.outputs.registry }}/${{ needs.prepare.outputs.ecr_repository }}:${{ github.sha }}" >> "$GITHUB_OUTPUT"
+
+  deploy-to-ecs:
+    needs: [prepare, build-and-push]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Render ECS task definition
+        id: task-def
+        uses: aws-actions/amazon-ecs-render-task-definition@v1
+        with:
+          task-definition: .aws/task-definition.json
+          container-name: app
+          image: ${{ needs.build-and-push.outputs.image_uri }}
+
+      - name: Deploy to ECS
+        uses: aws-actions/amazon-ecs-deploy-task-definition@v2
+        with:
+          task-definition: ${{ steps.task-def.outputs.task-definition }}
+          service: ${{ needs.prepare.outputs.ecs_service }}
+          cluster: ${{ needs.prepare.outputs.ecs_cluster }}
+          wait-for-service-stability: true
+
+  update-deployment-status:
+    needs: [prepare, create-deployment, build-and-push, deploy-to-ecs]
+    runs-on: ubuntu-latest
+    if: always()
+    permissions:
+      deployments: write
+      contents: read
+    steps:
+      - name: Update deployment status
+        uses: actions/github-script@v8
+        env:
+          DEPLOYMENT_ID: ${{ needs.create-deployment.outputs.deployment_id }}
+          DEPLOY_RESULT: ${{ needs.deploy-to-ecs.result }}
+          ENVIRONMENT_URL: ${{ needs.prepare.outputs.environment_url }}
+        with:
+          script: |
+            let state = "error";
+            if (process.env.DEPLOY_RESULT === "success") {
+              state = "success";
+            } else if (process.env.DEPLOY_RESULT === "failure") {
+              state = "failure";
+            }
+
+            await github.rest.repos.createDeploymentStatus({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              deployment_id: Number(process.env.DEPLOYMENT_ID),
+              state,
+              environment_url: process.env.ENVIRONMENT_URL || undefined
+            });

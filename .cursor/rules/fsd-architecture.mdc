@@ -1,0 +1,23 @@
+---
+description: FSD 아키텍처 및 경계 규칙
+globs: src/**/*.{ts,tsx}
+alwaysApply: false
+---
+
+# FSD 아키텍처
+
+- FSD 레이어(`app`, `processes`, `pages`, `widgets`, `features`, `entities`, `shared`) 기준으로 구조화합니다.
+- 각 레이어는 단일 책임에 집중하고 관심사를 혼합하지 않습니다.
+- 재사용 UI/유틸은 `shared`, 도메인 모델은 `entities`, 사용자 액션은 `features`에 배치합니다.
+- 파일은 작고 응집도 높게 유지하고, 재사용 로직은 전용 훅 또는 모듈로 분리합니다.
+
+## Import 경계
+
+- 상위 레이어에서 하위 레이어로의 역방향 의존 import를 금지합니다.
+- 딥 패스 import보다 슬라이스의 공개 API(예: `index.ts`)를 통한 import를 우선합니다.
+- 명시적인 공개 계약이 없는 슬라이스 간 결합을 피합니다.
+
+## 공개 API
+
+- 슬라이스별 안정적인 진입점을 노출하고 내부 구현은 비공개로 유지합니다.
+- 레이어 경계를 예측 가능하게 유지하기 위해 export 계약에 명시적 타입을 정의합니다.

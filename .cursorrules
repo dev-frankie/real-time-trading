@@ -1,0 +1,19 @@
+# .cursorrules
+
+> 이 파일은 요약 안내용입니다.
+> 실제 적용 규칙의 단일 소스는 `.cursor/rules/*.mdc`입니다.
+
+## Active Rule Files
+
+- `.cursor/rules/core-standards.mdc`
+- `.cursor/rules/fsd-architecture.mdc`
+- `.cursor/rules/ui-accessibility.mdc`
+- `.cursor/rules/typescript-react.mdc`
+- `.cursor/rules/testing-and-data-fetching.mdc`
+- `.cursor/rules/tailwind-design-tokens.mdc`
+- `.cursor/rules/modal-dialog.mdc`
+
+## Notes
+
+- 규칙 변경은 위 `.mdc` 파일에서만 수행합니다.
+- 본 파일에는 상세 규칙을 중복 작성하지 않습니다.

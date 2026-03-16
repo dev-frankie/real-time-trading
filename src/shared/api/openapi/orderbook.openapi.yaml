@@ -1,0 +1,48 @@
+openapi: 3.0.3
+info:
+  title: Trading System API
+  version: 1.0.0
+paths:
+  /api/orderbook:
+    get:
+      operationId: getOrderbook
+      summary: Get realtime orderbook items
+      responses:
+        "200":
+          description: Orderbook snapshot
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OrderbookResponse"
+components:
+  schemas:
+    OrderType:
+      type: string
+      enum:
+        - buy
+        - sell
+    OrderItem:
+      type: object
+      required:
+        - id
+        - price
+        - quantity
+        - type
+      properties:
+        id:
+          type: string
+        price:
+          type: number
+        quantity:
+          type: number
+        type:
+          $ref: "#/components/schemas/OrderType"
+    OrderbookResponse:
+      type: object
+      required:
+        - items
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/OrderItem"

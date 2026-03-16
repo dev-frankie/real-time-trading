@@ -1,0 +1,50 @@
+{
+  "trade": {
+    "title": "Real-time Orderbook Trading System",
+    "subtitle": "Select a quote and place your order.",
+    "fetchError": "Failed to load orderbook data.",
+    "retry": "Retry",
+    "retrying": "Retrying..."
+  },
+  "orderBook": {
+    "ariaLabel": "Real-time orderbook",
+    "type": "Type",
+    "price": "Price",
+    "quantity": "Quantity",
+    "timeline": "Timeline",
+    "buy": "Buy",
+    "sell": "Sell"
+  },
+  "orderModal": {
+    "title": "Place Order",
+    "selectedPrice": "Selected price: {{price}} KRW",
+    "availableQuantity": "Available quantity: {{quantity}}",
+    "quantityLabel": "Quantity",
+    "buy": "Buy",
+    "sell": "Sell",
+    "errors": {
+      "requiredNumber": "Quantity must be a number.",
+      "integer": "Quantity must be an integer.",
+      "min": "Quantity must be at least 1.",
+      "exceed": "Cannot exceed available quantity ({{quantity}})."
+    }
+  },
+  "complete": {
+    "notFound": "Order information not found.",
+    "done": "Order completed.",
+    "orderType": "Order type",
+    "price": "Price",
+    "quantity": "Quantity",
+    "totalPrice": "Total amount",
+    "backToTrade": "Trade again"
+  },
+  "theme": {
+    "light": "Light",
+    "dark": "Dark",
+    "system": "System"
+  },
+  "language": {
+    "en": "EN",
+    "kr": "KR"
+  }
+}

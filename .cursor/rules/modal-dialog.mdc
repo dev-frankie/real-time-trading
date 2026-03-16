@@ -1,0 +1,12 @@
+---
+description: Dialog modal implementation standards
+globs: src/**/*.{ts,tsx}
+alwaysApply: false
+---
+
+# 모달 규칙
+
+- 모달 UI는 기본적으로 `<dialog>` 기반 구현을 우선합니다.
+- 열림/닫힘 제어는 상태와 동기화하고 `cancel`, `close` 이벤트를 명시적으로 처리합니다.
+- 모달 외부 영역 클릭 시 닫힘 여부는 의도적으로 정의합니다.
+- 모달의 접근성 속성(제목, 라벨, 포커스 이동)을 항상 확인합니다.

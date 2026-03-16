@@ -28,7 +28,9 @@ function isDepthLevel(value: unknown): value is BinanceDepthLevel {
   );
 }
 
-function isDepthSnapshotResponse(value: unknown): value is BinanceDepthSnapshotResponse {
+function isDepthSnapshotResponse(
+  value: unknown,
+): value is BinanceDepthSnapshotResponse {
   if (typeof value !== "object" || value === null) {
     return false;
   }
@@ -42,7 +44,9 @@ function isDepthSnapshotResponse(value: unknown): value is BinanceDepthSnapshotR
   );
 }
 
-function isDepthStreamPayload(value: unknown): value is BinanceDepthStreamPayload {
+function isDepthStreamPayload(
+  value: unknown,
+): value is BinanceDepthStreamPayload {
   if (typeof value !== "object" || value === null) {
     return false;
   }
@@ -56,7 +60,10 @@ function isDepthStreamPayload(value: unknown): value is BinanceDepthStreamPayloa
   );
 }
 
-function toOrderItem(level: BinanceDepthLevel, type: OrderType): OrderItem | null {
+function toOrderItem(
+  level: BinanceDepthLevel,
+  type: OrderType,
+): OrderItem | null {
   const price = Number(level[0]);
   const quantity = Number(level[1]);
 
@@ -72,20 +79,27 @@ function toOrderItem(level: BinanceDepthLevel, type: OrderType): OrderItem | nul
   };
 }
 
-function mapDepthLevels(levels: BinanceDepthLevel[], type: OrderType): OrderItem[] {
+function mapDepthLevels(
+  levels: BinanceDepthLevel[],
+  type: OrderType,
+): OrderItem[] {
   return levels
     .map((level) => toOrderItem(level, type))
     .filter((item): item is OrderItem => item !== null);
 }
 
-function sortByType(type: OrderType): (left: OrderItem, right: OrderItem) => number {
+function sortByType(
+  type: OrderType,
+): (left: OrderItem, right: OrderItem) => number {
   if (type === "sell") {
     return (left, right) => left.price - right.price;
   }
   return (left, right) => right.price - left.price;
 }
 
-export function normalizeBinanceOrderbook(data: BinanceDepthSnapshotResponse): OrderItem[] {
+export function normalizeBinanceOrderbook(
+  data: BinanceDepthSnapshotResponse,
+): OrderItem[] {
   const asks = mapDepthLevels(data.asks, "sell")
     .sort(sortByType("sell"))
     .slice(0, binanceOrderbookConfig.depthLimit);

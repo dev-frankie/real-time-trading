@@ -14,12 +14,17 @@ interface GenerateOrderbookOptions {
 
 function randomQuantity(random: () => number): number {
   return (
-    Math.floor(random() * (ORDERBOOK_MAX_QUANTITY - ORDERBOOK_MIN_QUANTITY + 1)) +
-    ORDERBOOK_MIN_QUANTITY
+    Math.floor(
+      random() * (ORDERBOOK_MAX_QUANTITY - ORDERBOOK_MIN_QUANTITY + 1),
+    ) + ORDERBOOK_MIN_QUANTITY
   );
 }
 
-function createItem(type: OrderType, price: number, random: () => number): OrderItem {
+function createItem(
+  type: OrderType,
+  price: number,
+  random: () => number,
+): OrderItem {
   return {
     id: `${type}-${price}`,
     price,
@@ -37,17 +42,24 @@ export function generateOrderbook({
   const bids: OrderItem[] = [];
 
   for (let level = depth; level >= 1; level -= 1) {
-    asks.push(createItem("sell", basePrice + ORDERBOOK_PRICE_TICK * level, random));
+    asks.push(
+      createItem("sell", basePrice + ORDERBOOK_PRICE_TICK * level, random),
+    );
   }
 
   for (let level = 0; level < depth; level += 1) {
-    bids.push(createItem("buy", basePrice - ORDERBOOK_PRICE_TICK * level, random));
+    bids.push(
+      createItem("buy", basePrice - ORDERBOOK_PRICE_TICK * level, random),
+    );
   }
 
   return [...asks, ...bids];
 }
 
-export function nextBasePrice(currentPrice: number, random: () => number = Math.random): number {
+export function nextBasePrice(
+  currentPrice: number,
+  random: () => number = Math.random,
+): number {
   const swing =
     (Math.floor(random() * (ORDERBOOK_PRICE_SWING_STEP * 2 + 1)) -
       ORDERBOOK_PRICE_SWING_STEP) *

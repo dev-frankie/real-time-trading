@@ -13,7 +13,9 @@ export function isOrderItem(value: unknown): value is OrderItem {
   const hasValidTimeline =
     candidate.timeline === undefined ||
     (Array.isArray(candidate.timeline) &&
-      candidate.timeline.every((point) => typeof point === "number" && Number.isFinite(point)));
+      candidate.timeline.every(
+        (point) => typeof point === "number" && Number.isFinite(point),
+      ));
 
   return (
     typeof candidate.id === "string" &&

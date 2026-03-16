@@ -33,17 +33,26 @@ type OrderbookStreamAction =
   | { type: "syncSnapshot"; items: OrderItem[] }
   | { type: "applyPatch"; patch: BinanceDepthPatch };
 
-function withTimeline(previousItems: OrderItem[], nextItems: OrderItem[]): OrderItem[] {
-  const previousMap = new Map(previousItems.map((item) => [item.id, item.timeline ?? []]));
+function withTimeline(
+  previousItems: OrderItem[],
+  nextItems: OrderItem[],
+): OrderItem[] {
+  const previousMap = new Map(
+    previousItems.map((item) => [item.id, item.timeline ?? []]),
+  );
 
   return nextItems.map((item) => {
     const previousTimeline = previousMap.get(item.id) ?? [];
-    const nextTimeline = [...previousTimeline, item.quantity].slice(-ORDERBOOK_TIMELINE_MAX_POINTS);
+    const nextTimeline = [...previousTimeline, item.quantity].slice(
+      -ORDERBOOK_TIMELINE_MAX_POINTS,
+    );
 
     return {
       ...item,
       timeline:
-        nextTimeline.length > 0 ? nextTimeline : [item.quantity, item.quantity, item.quantity],
+        nextTimeline.length > 0
+          ? nextTimeline
+          : [item.quantity, item.quantity, item.quantity],
     };
   });
 }
@@ -66,9 +75,12 @@ export function useOrderbookStream(): UseOrderbookStreamResult {
 
   const query = useQuery({
     queryKey: orderbookQueryKeys.list(),
-    queryFn: () => (isBinanceSource ? fetchBinanceOrderbook() : fetchMockOrderbook()),
+    queryFn: () =>
+      isBinanceSource ? fetchBinanceOrderbook() : fetchMockOrderbook(),
     staleTime: ORDERBOOK_LIST_STALE_TIME_MS,
-    refetchInterval: isBinanceSource ? ORDERBOOK_LIST_STALE_TIME_MS : ORDERBOOK_UPDATE_INTERVAL_MS,
+    refetchInterval: isBinanceSource
+      ? ORDERBOOK_LIST_STALE_TIME_MS
+      : ORDERBOOK_UPDATE_INTERVAL_MS,
   });
 
   useEffect(() => {

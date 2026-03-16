@@ -94,7 +94,7 @@ pnpm build
 ## 주요 스크립트
 
 ```bash
-pnpm dev 
+pnpm dev
 pnpm build
 pnpm preview
 pnpm knip
